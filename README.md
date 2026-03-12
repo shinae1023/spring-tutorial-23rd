@@ -1,12 +1,14 @@
-# spring-tutorial-23rd
+<details>
+<summary><h1>spring-tutorial-23rd</h1></summary>
 
 <img width="1674" height="628" alt="image" src="https://github.com/user-attachments/assets/58a0006a-2362-409c-845a-f7d9f3691201" />
 
 <img width="694" height="372" alt="image" src="https://github.com/user-attachments/assets/b72c3223-8fdc-4128-b2c0-bea23f35a6c6" />
+</details>
 
-
-# spring이 지원하는 기술들
-
+<details>
+<summary><h1>spring이 지원하는 기술들</h1></summary>
+    
 ## 1. POJO란?
 
 **POJO (Plain Old Java Objection) : 특정 기술이나 프레임워크에 종속되지 않은 순수한 자바 객체**
@@ -468,3 +470,4 @@ public class TransactionAspect {
     - **낮은 결합도 :** 특정 라이브러리나 서버에 종속되지 않음
     - **테스트 용이성 :** 실제 메일 서버나 실제 DB가 없어도, 테스트용 가짜 구현체를 주입해서 간편하게 테스트 가능
     - **유지보수 향상 :** 신기술이 나와서 라이브러리를 교체해야 할 때 리스크 감소
+</details>
