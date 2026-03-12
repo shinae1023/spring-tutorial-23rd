@@ -471,3 +471,290 @@ public class TransactionAspect {
     - **테스트 용이성 :** 실제 메일 서버나 실제 DB가 없어도, 테스트용 가짜 구현체를 주입해서 간편하게 테스트 가능
     - **유지보수 향상 :** 신기술이 나와서 라이브러리를 교체해야 할 때 리스크 감소
 </details>
+
+<details>
+<summary><h1>Spring Bean</h1></summary>
+    
+## 1. Spring Bean
+
+### 1) 스프링 빈이란?
+
+- **관리 주체** : 개발자가 `new` 연산자로 직접 생성하지 않고, 스프링 IoC(Inversion of Control) 컨테이너가 생성, 구성, 관리하는 자바 객체
+- **등록 방식** : 클래스 위에 `@Component`를 붙이거나 설정 클래스 내 메서드에 `@Bean`을 선언하여 컨테이너에 등록
+- **제어의 역전** : 객체의 생명주기와 의존성 관리 권한이 개발자로부터 스프링 프레임워크로 넘어간 상태를 의미
+
+### 2) 스프링 빈의 특징
+
+- **의존성 자동 주입** : 컨테이너가 빈 정의를 읽고 필요한 객체들을 서로 연결
+- **싱글톤 원칙** : 특별한 설정이 없는 한, 컨테이너 내에서 단 하나의 인스턴스만 생성되어 애플리케이션 전체에서 공유
+- **생명주기 콜백** : 객체가 생성된 직후나 소멸되기 직전에 특정 로직을 수행할 수 있도록 콜백 기능을 제공
+
+### 3) 어노테이션의 정의와 Java에서의 구현
+
+코드에 메타데이터를 추가하여 컴파일러나 런타임에 특정 정보를 전달하는 도구
+
+- **@interface 선언 :** Java에서는 `@interface` 키워드를 사용하여 커스텀 어노테이션을 정의
+- **상속 구조 :** 모든 어노테이션은 내부적으로 `java.lang.annotation.Annotation` 인터페이스를 상속받음
+- **리플렉션 활용 :** `Reflection API`를 통해 실행 중에 클래스나 메서드에 붙은 어노테이션 정보를 읽어 비즈니스 로직에 활용
+
+```java
+// 1. 어노테이션 정의
+@Target(ElementType.TYPE) // 클래스 수준에 적용
+@Retention(RetentionPolicy.RUNTIME) // 실행 시점까지 유지
+public @interface MyComponent {
+    String value() default ""; // 추가 설정값 정의 가능
+}
+```
+
+### 4) 빈 등록의 과정
+
+스프링 컨테이너가 설정 정보를 읽어 실제 객체를 생성하고 관리 목록에 올리는 프로세스
+
+- **설정 정보 읽기 :** `@Configuration` 클래스나 XML 파일 등에서 빈 정의 정보를 수집
+- **BeanDefinition 생성 :** 빈의 이름, 클래스 타입, 초기화 메서드 등 상세 정보를 담은 `BeanDefinition` 객체를 생성
+- **레지스트리 등록 :** 생성된 메타 정보를 `BeanDefinitionRegistry`라는 저장소에 등록
+- **객체 생성 및 주입 :** 등록된 정보를 바탕으로 실제 자바 인스턴스를 생성하고 의존관계를 연결(DI)
+
+### 5) @ComponentScan의 탐색 과정
+
+스프링이 프로젝트 내의 클래스들을 전수 조사하여 자동으로 빈을 등록하는 메커니즘
+
+- **베이스 패키지 지정 :** `@ComponentScan`이 선언된 위치를 기준으로 하위 패키지를 탐색 범위로 설정
+- **필터링 수행 :** `@Component`를 포함하여 이를 확장한 `@Service`, `@Repository`, `@Controller` 어노테이션을 식별
+- **바이트코드 분석 :** `ClassPathBeanDefinitionScanner`가 클래스 파일(`.class`)을 읽어 빈 후보군을 선별
+- **중복 체크 :** 동일한 이름의 빈이 이미 등록되어 있는지 확인 후 최종적으로 컨테이너에 등록
+
+### 5-1) @Service, @Repository, @Controller
+
+- 메타 어노테이션
+    - **정의** : 어노테이션 위에 붙은 어노테이션
+    - **상속 구조** : 자바 어노테이션은 클래스 상속 기능이 없지만, 스프링은 어노테이션이 다른 어노테이션을 포함하는 '계층 구조'를 인식하도록 설계
+    - **구성** : `@Service`, `@Repository`, `@Controller`는 모두 내부에 `@Component`를 가지고 있는 메타 어노테이션
+
+```java
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Component
+public @interface Service {
+
+	/**
+	 * Alias for {@link Component#value}.
+	 */
+	@AliasFor(annotation = Component.class)
+	String value() default "";
+
+}
+
+//RestController가 내부에 @Controller를 가지고 있음
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Controller
+@ResponseBody
+public @interface RestController {
+
+	/**
+	 * The value may indicate a suggestion for a logical component name,
+	 * to be turned into a Spring bean in case of an autodetected component.
+	 * @return the suggested component name, if any (or empty String otherwise)
+	 * @since 4.0.1
+	 */
+	@AliasFor(annotation = Controller.class)
+	String value() default "";
+
+}
+
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Component
+public @interface Controller {
+
+	/**
+	 * Alias for {@link Component#value}.
+	 */
+	@AliasFor(annotation = Component.class)
+	String value() default "";
+
+}
+```
+
+### 5-2) JpaRepository를 상속받으면 @Repository를 달지 않아도 될까?
+
+```java
+package com.ceos23.spring_boot;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface TestRepository extends JpaRepository<Test, Long> {}
+```
+
+작성한 `TestRepository`는 다음과 같다 
+
+이 리포지토리는 `JpaRepository`를 상속하고 있는데 이를 들어가보면 
+
+<img width="1952" height="846" alt="image" src="https://github.com/user-attachments/assets/e83e43a4-f1e0-45bc-ba7d-51c6135dfc39" />
+
+`@Repository` 대신 `@NoRepositoryBean` 이라고 쓰여져 있는 것을 확인할 수 있다
+
+→ 이는 Spring Data JPA 때문이다
+
+### **5-3) @Repository가 없어도 되는 이유**
+
+1.  **자동 프록시 생성 (Proxy Mechanism)**
+    - **동적 생성** : 개발자가 인터페이스만 선언하면, 스프링 데이터 JPA가 런타임에 해당 인터페이스의 구현체(프록시 객체)를 자동으로 만들어줌.
+    - **자동 등록** : 이 과정에서 생성된 프록시 객체를 스프링이 알아서 빈으로 등록하기 때문에 별도의 어노테이션이 필요 없음.
+2.  **@EnableJpaRepositories의 역할**
+    - **스캔 기능** : 스프링 부트 메인 클래스 등에 (보이지 않게) 설정된 `@EnableJpaRepositories`가 특정 패키지 내에서 `Repository` 인터페이스를 상속받은 모든 인터페이스를 찾아냄.
+    - **타입 기반 탐색** : 어노테이션이 있냐 없냐보다, `JpaRepository`를 상속받았느냐를 기준으로 빈 등록 대상을 결정함.
+3. **@NoRepositoryBean의 정체**
+    - **정의** : "이 인터페이스는 실제 리포지토리 빈으로 만들지 마라"고 스프링에게 알리는 표식
+    - **방지책** : 스프링 데이터 JPA는 리포지토리 인터페이스를 스캔할 때, 해당 인터페이스가 실제 데이터베이스와 연결된 리포지토리인지 아니면 단순히 기능을 물려주기 위한 중간 인터페이스인지 구분해야 함.
+    - JpaRepository에 붙어 있는 이유
+        - **공통 인터페이스 보호** : `JpaRepository`는 모든 엔티티에 공통으로 쓰이는 메서드(`save`, `findAll` 등)를 정의한 인터페이스일 뿐, 특정 엔티티(예 : User, Order)를 위한 리포지토리가 아님
+        - **오류 방지** : 만약 여기에 `@NoRepositoryBean`이 없다면, 스프링은 `JpaRepository` 자체를 빈으로 만들려고 시도하다가 "이건 어떤 엔티티용 리포지토리야?"라며 에러 발생
+
+### 6) 다중 구현체 주입 전략
+
+하나의 인터페이스를 여러 서비스 클래스가 구현했을 때 발생하는 주입 모호성을 해결하는 방법
+
+- **@Primary 사용 :** 여러 후보 빈 중 우선적으로 주입될 기본 빈을 지정
+- **@Qualifier 사용 :** 주입 시점에 별칭을 명시하여 원하는 특정 구현체를 선택
+- **List/Map 주입 :** 해당 인터페이스의 모든 구현체를 한꺼번에 주입받아 로직에 따라 동적으로 사용
+
+```java
+// 인터페이스 정의
+public interface DiscountPolicy { int discount(int price); }
+
+// 구현체 A
+@Component
+@Primary // 기본 주입 대상으로 설정
+public class FixedDiscount implements DiscountPolicy { ... }
+
+// 구현체 B
+@Component
+@Qualifier("rateDiscount") // 별칭 부여
+public class RateDiscount implements DiscountPolicy { ... }
+
+// 사용 예시
+@Service
+public class OrderService {
+    private final DiscountPolicy discountPolicy;
+
+    // 생성자 주입 시 @Qualifier를 사용하면 해당 빈을 찾아감
+    public OrderService(@Qualifier("rateDiscount") DiscountPolicy discountPolicy) {
+        this.discountPolicy = discountPolicy;
+    }
+}
+```
+
+## 2. Bean의 라이프사이클
+
+### 1) 생명주기 흐름
+
+빈이 생성되고 소멸될 때까지 컨테이너가 관리하는 일정한 단계
+
+- **스프링 컨테이너 생성 :** ApplicationContext가 초기화되며 관리 준비 시작
+- **스프링 빈 생성 :** 자바 객체 인스턴스를 생성 (생성자 주입 단계)
+- **의존관계 주입 :** 필드 주입이나 수정자 주입을 통해 의존성 연결
+- **초기화 콜백 :** 모든 주입이 끝난 후 빈이 사용되기 전 준비 작업 수행
+- **소멸 전 콜백 :** 컨테이너 종료 직전, 빈이 자원을 정리할 수 있는 기회 제공
+
+### 2) 초기화 및 소멸 콜백 구현
+
+가장 권장되는 어노테이션 기반의 생명주기 관리 방식
+
+- **@PostConstruct:** 의존관계 주입이 완료된 직후 실행될 초기화 로직에 사용
+- **@PreDestroy:** 빈이 컨테이너에서 제거되기 직전에 실행될 종료 로직에 사용
+
+```java
+@Component
+public class NetworkClient {
+    // 1. 객체 생성
+    public NetworkClient() { System.out.println("생성자 호출"); }
+
+    // 2. 초기화 (의존성 주입 완료 후)
+    @PostConstruct
+    public void init() { System.out.println("서버 연결 초기화"); }
+
+    // 3. 소멸 전 정리 (컨테이너 종료 전)
+    @PreDestroy
+    public void close() { System.out.println("서버 연결 종료"); }
+}
+```
+
+## 3. Bean Scope
+
+### 1) 스코프의 종류
+
+빈이 존재할 수 있는 범위와 생존 기간의 설정
+
+- **Singleton :** 기본값이며, 스프링 컨테이너 내에 단 하나의 인스턴스만 생성되어 공유
+- **Prototype :** 빈을 요청할 때마다 새로운 인스턴스를 생성하여 반환 (주입까지만 관리)
+- **Request :** HTTP 요청 하나가 시작되고 끝날 때까지 유지되는 스코프
+
+### 2) 싱글톤과 프로토타입 비교
+
+관리 방식의 차이에 따른 핵심 특징 구분
+
+- **관리 책임 :** 싱글톤은 컨테이너가 소멸까지 책임지지만, 프로토타입은 생성 후 클라이언트에게 책임을 넘김
+- **상태 공유 :** 싱글톤은 여러 클라이언트가 객체를 공유하므로 무상태(Stateless)로 설계해야 안전
+- **객체 수 :** 싱글톤은 메모리 효율이 좋으나, 프로토타입은 빈 요청 시마다 새로운 메모리를 할당
+
+### 2-1) 싱글톤을 무상태로 설계하는 이유
+
+- 상태 유지 설계의 문제점
+    - **공유 필드 발생**: 여러 스레드가 동시에 값을 변경하면 데이터가 뒤섞임
+    - **예상치 못한 결과**: 사용자 A의 주문 금액이 사용자 B에 의해 덮어씌워지는 사고 발생
+    
+    ```java
+    @Component
+    public class StatefulService {
+    
+        private int price; // 상태를 유지하는 필드 (문제 발생 지점)
+    
+        public void order(String name, int price) {
+            System.out.println("name = " + name + " price = " + price);
+            this.price = price; // 여기서 특정 사용자의 상태를 필드에 저장함
+        }
+    
+        public int getPrice() {
+            return price; // 저장된 필드 값을 반환함
+        }
+    }
+    ```
+    
+    **멀티스레드 환경에서의 시나리오**
+    1. **사용자 A**가 10,000원 주문 → `price` 필드가 10,000원
+    2. **사용자 B**가 20,000원 주문  → `price` 필드가 20,000원으로 덮어씌워짐
+    3. **사용자 A**가 금액을 조회함 → 본인의 주문 금액인 10,000원이 아닌 **20,000원이 조회**
+    
+- **무상태 설계**
+    
+    지역 변수 및 파라미터 활용
+    
+    - **독립적 메모리**: 지역 변수는 각 스레드마다 할당되는 **스택(Stack) 영역**에 저장되어 공유되지 않음.
+    - **값의 반환**: 필드에 저장하는 대신 결과를 즉시 반환하거나 파라미터로 넘김.
+    
+    ```java
+    @Component
+    public class StatelessService {
+    
+        public int order(String name, int price) {
+            System.out.println("name = " + name + " price = " + price);
+            // 필드에 저장하지 않고, 받은 값을 그대로 반환하거나 비즈니스 로직에만 사용
+            return price; 
+        }
+    }
+    ```
+    
+- 설계 원칙
+    - **수정 가능한 필드 금지** : 빈 내부에 상태를 담는 변수를 두지 않음
+    - **읽기 전용 필드 활용** : 설정값 등 변하지 않는 데이터는 `final`을 사용하여 불변성을 보장
+    - **의존관계 주입 필드** : 다른 빈(Service, Repository 등)을 참조하는 필드는 생성자 주입을 통해 한 번만 할당
+</details>
+
+<details>
+<summary><h1>Spring MVC</h1></summary>
+
+</details>
