@@ -757,4 +757,80 @@ public class NetworkClient {
 <details>
 <summary><h1>Spring MVC</h1></summary>
 
+## 1. MVC 패턴과 Spring MVC
+
+### **1) MVC 패턴의 정의**
+
+- **개념** : 애플리케이션의 역할을 Model(데이터), View(화면), Controller(제어)로 나누어 관리하는 디자인 패턴
+- **분리 목적** : 비즈니스 로직과 UI를 분리하여 서로의 의존성을 낮추고 유지보수 효율을 극대화함
+
+### **2) Spring MVC만의 차이점**
+
+- **Front Controller 패턴** : 모든 요청을 하나의 입구(Dispatcher Servlet)에서 전담하여 처리하는 구조를 채택함
+- **컴포넌트 중심** : HandlerMapping, ViewResolver 등 각 역할을 수행하는 객체들이 인터페이스로 정의되어 있어 확장이 매우 자유로움
+- **어노테이션 기반 매핑** : XML 설정 없이 @Controller 하나로 유연하게 요청을 처리할 수 있도록 설계됨
+
+## 2. Servlet과 웹 요청 처리
+
+### **1) Servlet(서블릿)이란?**
+
+- **정의** : 클라이언트의 요청을 처리하고 동적인 콘텐츠를 응답으로 생성하는 자바 기반의 웹 컴포넌트
+- **특징** : HttpServlet 클래스를 상속받아 구현하며, 서블릿 컨테이너(Tomcat 등)에 의해 생명주기가 관리됨
+
+### **2) 웹 요청 처리 과정**
+
+- **객체 생성** : HTTP 요청 시 서블릿 컨테이너가 `HttpServletRequest`, `HttpServletResponse` 객체를 생성함
+- **스레드 할당** : 요청마다 스레드를 할당하여 서블릿의 `service()` 메서드를 호출함
+- **로직 수행** : GET/POST 등 메서드 타입에 따라 `doGet()`, `doPost()` 등을 실행하여 비즈니스 로직을 처리함
+- **응답 및 소멸** : 처리가 끝나면 응답을 반환하고, 생성된 요청/응답 객체를 메모리에서 해제함
+
+## 3. WAS(Web Application Server)와 Tomcat
+
+### **1) WAS의 개념**
+
+- **정의** : HTTP를 통해 애플리케이션을 수행해주는 미들웨어로, 주로 동적인 비즈니스 로직을 처리함
+- **구성 요소** : 웹 서버 기능 + 웹 컨테이너(서블릿 컨테이너) 기능을 포함함
+
+### **2) Tomcat(톰캣)의 역할**
+
+- **서블릿 컨테이너** : 서블릿의 생성, 실행, 파괴를 담당하는 엔진 역할을 수행함
+- **내장 WAS** : 스프링 부트에서는 별도의 WAS 설치 없이 톰캣을 내장하여 실행 환경을 간소화함
+
+## 4. Dispatcher Servlet과 doDispatch 흐름 분석
+
+### **1) Dispatcher Servlet의 정의**
+
+- **역할** : HTTP 요청을 가장 먼저 받아 적절한 컨트롤러에게 배분하는 '중앙 컨트롤러(Front Controller)'임
+1. **doDispatch 메서드의 동작 흐름**
+2. **핸들러 조회 (getHandler)** : `HandlerMapping`을 통해 요청 URL에 매핑된 적절한 컨트롤러(핸들러)를 탐색함
+3. **핸들러 어댑터 조회 (getHandlerAdapter)** : 찾은 핸들러를 실행할 수 있는 `HandlerAdapter`를 결정함
+4. **인터셉터 전처리 (applyPreHandle)** : 컨트롤러 실행 전, 등록된 인터셉터의 `preHandle`을 호출하여 권한 등을 체크함
+5. **핸들러 실행 (ha.handle)** : 어댑터를 통해 실제 컨트롤러 메서드를 호출하고 비즈니스 로직을 수행함
+6. **ModelAndView 반환** : 컨트롤러가 처리한 결과(Model)와 이동할 페이지 정보(View)를 어댑터가 `ModelAndView`로 변환하여 반환함
+7. **인터셉터 후처리 (applyPostHandle)** : 로직 수행 후, 뷰 렌더링 전에 인터셉터의 `postHandle`을 실행함
+8. **뷰 렌더링 (processDispatchResult)** : `ViewResolver`를 통해 논리적 뷰 이름을 실제 뷰 객체로 변환하고 화면을 생성하여 응답함
+
+**코드 구조**
+
+```java
+protected void doDispatch(HttpServletRequest request, HttpServletResponse response) throws Exception {
+    // 1. 핸들러 결정
+    mappedHandler = getHandler(processedRequest);
+
+    // 2. 핸들러 어댑터 결정
+    HandlerAdapter ha = getHandlerAdapter(mappedHandler.getHandler());
+
+    // 3. 실행 전 인터셉터 체크
+    if (!mappedHandler.applyPreHandle(processedRequest, response)) return;
+
+    // 4. 어댑터를 통해 컨트롤러 실행
+    mv = ha.handle(processedRequest, response, mappedHandler.getHandler());
+
+    // 5. 실행 후 인터셉터 처리
+    mappedHandler.applyPostHandle(processedRequest, response, mv);
+
+    // 6. 결과 처리 및 뷰 렌더링
+    processDispatchResult(processedRequest, response, mappedHandler, mv, dispatchException);
+}
+```
 </details>
