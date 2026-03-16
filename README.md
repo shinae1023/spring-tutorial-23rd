@@ -11,7 +11,7 @@
     
 ## 1. POJO란?
 
-**POJO (Plain Old Java Objection) : 특정 기술이나 프레임워크에 종속되지 않은 순수한 자바 객체**
+**POJO (Plain Old Java Object) : 특정 기술이나 프레임워크에 종속되지 않은 순수한 자바 객체**
 
 ### 1) POJO의 탄생 배경
 
